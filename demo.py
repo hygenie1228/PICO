@@ -23,65 +23,67 @@ def main(
 
     img_filename = input_folder.split("/")[-1]  
     input_folder = input_folder.replace(f"/{img_filename}", "")
-
-
-    dir_path = "data/Open3DHOI/open3dhoi_gt1/air_cushion-floating_94"
-    exp_name = dir_path.split("/")[-2]
-    sample = dir_path.split("/")[-1]
-
-    img = load_image(f"{dir_path}/image.jpg")
-    human_inference_file = f"{dir_path}/smplx_parameters.json"
-    human_detection_file = f"{dir_path}/person_mask.png"
-    object_mesh_file = f"{dir_path}/obj_pcd_h_align.obj"
-    object_detection_file = f"{dir_path}/obj_mask.png"
-    output_folder = f"exp/{exp_name}/{sample}"
-    os.makedirs(output_folder, exist_ok=True)
-
-
-    human_params = load_human_params(
-        human_inference_file,
-        human_detection_file,
-        img.shape[:2]
-    )
-    object_params = load_object_params(
-        object_mesh_file,
-        object_detection_file,
-        img.shape[:2]
-    )
-    contact_mapping = load_contact_mapping(
-        os.path.join(input_folder, cfg.contact_mapping_file)
-    )
-
     
-    if not cfg.skip_phase_1:
-        p1_object_params = optimize_phase1_contact(human_params, object_params, contact_mapping, cfg.nr_phase_1_steps)
-        object_params.vertices = p1_object_params['vertices']
-        save_phase_results(
-            img_filename, output_folder, img,
-            human_params, object_params,
-            phase = 1,
+    from glob import glob
+    from tqdm import tqdm
+    dir_list = sorted(glob(f"data/Open3DHOI/open3dhoi_gt1/*"))
+    for dir_path in tqdm(dir_list):
+        exp_name = dir_path.split("/")[-2]
+        sample = dir_path.split("/")[-1]
+
+        img = load_image(f"{dir_path}/image.jpg")
+        human_inference_file = f"{dir_path}/smplx_parameters.json"
+        human_detection_file = f"{dir_path}/person_mask.png"
+        object_mesh_file = f"{dir_path}/obj_pcd_h_align.obj"
+        object_detection_file = f"{dir_path}/obj_mask.png"
+        output_folder = f"exp/{exp_name}/{sample}"
+        os.makedirs(output_folder, exist_ok=True)
+
+
+        human_params = load_human_params(
+            human_inference_file,
+            human_detection_file,
+            img.shape[:2]
+        )
+        object_params = load_object_params(
+            object_mesh_file,
+            object_detection_file,
+            img.shape[:2]
+        )
+        contact_mapping = load_contact_mapping(
+            os.path.join(input_folder, cfg.contact_mapping_file)
         )
 
+        
+        if not cfg.skip_phase_1:
+            p1_object_params = optimize_phase1_contact(human_params, object_params, contact_mapping, cfg.nr_phase_1_steps)
+            object_params.vertices = p1_object_params['vertices']
+            save_phase_results(
+                img_filename, output_folder, img,
+                human_params, object_params,
+                phase = 1,
+            )
 
-    if not cfg.skip_phase_2:
-        p2_object_params = optimize_phase2_image(human_params, object_params, contact_mapping, img, loss_weights, cfg.nr_phase_2_steps)
-        object_params.vertices = p2_object_params['vertices']
-        object_params.scale = p2_object_params['scaling']
-        save_phase_results(
-            img_filename, output_folder, img,
-            human_params, object_params,
-            phase = 2,
-        )
+
+        if not cfg.skip_phase_2:
+            p2_object_params = optimize_phase2_image(human_params, object_params, contact_mapping, img, loss_weights, cfg.nr_phase_2_steps)
+            object_params.vertices = p2_object_params['vertices']
+            object_params.scale = p2_object_params['scaling']
+            save_phase_results(
+                img_filename, output_folder, img,
+                human_params, object_params,
+                phase = 2,
+            )
 
 
-    if not cfg.skip_phase_3:
-        p3_human_params = optimize_phase3_human(human_params, object_params, contact_mapping, img, loss_weights, cfg.nr_phase_3_steps)
-        human_params.vertices = p3_human_params['vertices']
-        save_phase_results(
-            img_filename, output_folder, img,
-            human_params, object_params,
-            phase = 3,
-        )
+        if not cfg.skip_phase_3:
+            p3_human_params = optimize_phase3_human(human_params, object_params, contact_mapping, img, loss_weights, cfg.nr_phase_3_steps)
+            human_params.vertices = p3_human_params['vertices']
+            save_phase_results(
+                img_filename, output_folder, img,
+                human_params, object_params,
+                phase = 3,
+            )
 
 
 
