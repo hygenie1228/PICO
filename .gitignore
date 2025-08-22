@@ -12,3 +12,6 @@ static/
 # drafts
 draft*
 *_poc/
+data
+exp
+*.png

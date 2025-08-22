@@ -22,21 +22,30 @@ def main(
         loss_weights = default_loss_weights
 
     img_filename = input_folder.split("/")[-1]  
-    img = load_image(os.path.join(input_folder, img_filename))
+    input_folder = input_folder.replace(f"/{img_filename}", "")
 
-    if os.path.exists(os.path.join(output_folder, img_filename)):
-        print(f"--> Skipping {img_filename} as it has already been processed.")
-        return
+
+    dir_path = "data/Open3DHOI/open3dhoi_gt1/air_cushion-floating_94"
+    exp_name = dir_path.split("/")[-2]
+    sample = dir_path.split("/")[-1]
+
+    img = load_image(f"{dir_path}/image.jpg")
+    human_inference_file = f"{dir_path}/smplx_parameters.json"
+    human_detection_file = f"{dir_path}/person_mask.png"
+    object_mesh_file = f"{dir_path}/obj_pcd_h_align.obj"
+    object_detection_file = f"{dir_path}/obj_mask.png"
+    output_folder = f"exp/{exp_name}/{sample}"
+    os.makedirs(output_folder, exist_ok=True)
 
 
     human_params = load_human_params(
-        os.path.join(input_folder, cfg.human_inference_file),
-        os.path.join(input_folder, cfg.human_detection_file),
+        human_inference_file,
+        human_detection_file,
         img.shape[:2]
     )
     object_params = load_object_params(
-        os.path.join(input_folder, cfg.object_mesh_file),
-        os.path.join(input_folder, cfg.object_detection_file),
+        object_mesh_file,
+        object_detection_file,
         img.shape[:2]
     )
     contact_mapping = load_contact_mapping(
@@ -82,8 +91,8 @@ if __name__ == "__main__":
         sys.exit(1)
     input_folder = sys.argv[1]
     output_folder = sys.argv[2]
-    if not os.path.exists(input_folder):
-        print("---> Folder does not exist: ", input_folder)
-        sys.exit(1)
+    # if not os.path.exists(input_folder):
+    #     print("---> Folder does not exist: ", input_folder)
+    #     sys.exit(1)
 
     main(input_folder, output_folder)

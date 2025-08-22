@@ -8,43 +8,53 @@ from src.utils.geometry import rot6d_to_matrix
 
 
 def load_contact_mapping(contact_map_path: str, convert_to_smplx: bool = True) -> dict:
-    contact_mapping_json = json.load(open(contact_map_path))
+    # contact_map_path = "data/PICO/annotations/apple__hake_train2015_HICO_train2015_00000551.json"
+    # contact_mapping_json = json.load(open(contact_map_path))
 
-    # simplify the dictionary
-    contact_transfer_map = {}
-    for elem in contact_mapping_json['data']:
-        contact_transfer_map[elem['name']] = elem['contactPoints']
+    # # simplify the dictionary
+    # contact_transfer_map = {}
+    # for elem in contact_mapping_json['data']:
+    #     contact_transfer_map[elem['name']] = elem['contactPoints']
 
-    # remove unmapped contact patches
-    # human keys start with 'human', object keys start with 'object'
-    # remove any keys, that don't have a matching other key
-    keys_to_remove = []
-    for key in contact_transfer_map:
-        if key.startswith('human'):
-            if not any([x == key.replace('human', 'obj') for x in contact_transfer_map]):
-                keys_to_remove.append(key)
-        elif key.startswith('obj'):
-            if not any([x == key.replace('obj', 'human') for x in contact_transfer_map]):
-                keys_to_remove.append(key)
-    for key in keys_to_remove:
-        contact_transfer_map.pop(key)
-        print(f"removed {key} from contact_transfer_map")
+    # # remove unmapped contact patches
+    # # human keys start with 'human', object keys start with 'object'
+    # # remove any keys, that don't have a matching other key
+    # keys_to_remove = []
+    # for key in contact_transfer_map:
+    #     if key.startswith('human'):
+    #         if not any([x == key.replace('human', 'obj') for x in contact_transfer_map]):
+    #             keys_to_remove.append(key)
+    #     elif key.startswith('obj'):
+    #         if not any([x == key.replace('obj', 'human') for x in contact_transfer_map]):
+    #             keys_to_remove.append(key)
+    # for key in keys_to_remove:
+    #     contact_transfer_map.pop(key)
+    #     print(f"removed {key} from contact_transfer_map")
 
-    # check if the same number of keys starting with 'human' and 'object' are present
-    human_keys = [x for x in contact_transfer_map if x.startswith('human')]
-    object_keys = [x for x in contact_transfer_map if x.startswith('obj')]
-    assert len(human_keys) == len(object_keys), f"number of human keys: {len(human_keys)}, number of object keys: {len(object_keys)}"
+    # # check if the same number of keys starting with 'human' and 'object' are present
+    # human_keys = [x for x in contact_transfer_map if x.startswith('human')]
+    # object_keys = [x for x in contact_transfer_map if x.startswith('obj')]
+    # assert len(human_keys) == len(object_keys), f"number of human keys: {len(human_keys)}, number of object keys: {len(object_keys)}"
 
-    # convert the human part to smplx if needed
-    if convert_to_smplx:
-        contact_transfer_map = convert_contact_map_to_smplx(contact_transfer_map)
+    # # convert the human part to smplx if needed
+    # if convert_to_smplx:
+    #     contact_transfer_map = convert_contact_map_to_smplx(contact_transfer_map)
 
-    # print the number of contact points for each object
-    print('contact_transfer_map processed:')
-    for key in contact_transfer_map:
-        if key.startswith('human'):
-            print(f"... {key.replace('human', '')}: h {len(contact_transfer_map[key])}, o {len(contact_transfer_map[key.replace('human', 'obj')])}")
-            assert len(contact_transfer_map[key]) == len(contact_transfer_map[key.replace('human', 'obj')]), f"number of contact points for {key} and {key.replace('human', 'obj')} don't match"
+    # # print the number of contact points for each object
+    # print('contact_transfer_map processed:')
+    # for key in contact_transfer_map:
+    #     if key.startswith('human'):
+    #         print(f"... {key.replace('human', '')}: h {len(contact_transfer_map[key])}, o {len(contact_transfer_map[key.replace('human', 'obj')])}")
+    #         assert len(contact_transfer_map[key]) == len(contact_transfer_map[key.replace('human', 'obj')]), f"number of contact points for {key} and {key.replace('human', 'obj')} don't match"
+
+    # Update contact relationship
+
+    contact_transfer_map = {
+        "objShaperighthand": [],
+        "objShapelefthand": [],
+        "humanShaperighthand": [],
+        "humanShapelefthand": []
+    }
 
     return contact_transfer_map
 
@@ -110,7 +120,12 @@ def calculate_human_points(transformed_vertices, contact_data):
                     idx = int(point.split()[1])
                     human_points.append(transformed_vertices[idx])
     # Stack the list of tensors into a single tensor
-    human_points_tensor = torch.stack(human_points)
+    
+    try:
+        human_points_tensor = torch.stack(human_points)
+    except:
+        human_points_tensor = torch.tensor([]).cuda()
+
     return human_points_tensor
 
 
@@ -138,7 +153,10 @@ def calculate_object_points(transformed_vertices, contact_data, mesh_obj_faces):
                     object_points.append(point)
 
     # Stack the list of tensors into a single tensor
-    object_points_tensor = torch.stack(object_points)
+    try:
+        object_points_tensor = torch.stack(object_points)
+    except:
+        object_points_tensor = torch.tensor([]).cuda()
     
     return object_points_tensor
 

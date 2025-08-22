@@ -9,6 +9,7 @@ class HumanParams:
         bbox,
         mask,
         smplx_params,
+        intrinsic,
     ):
         self.vertices = vertices
         self.faces = faces
@@ -16,6 +17,7 @@ class HumanParams:
         self.bbox = bbox
         self.mask = mask
         self.smplx_params = smplx_params
+        self.intrinsic = intrinsic
 
     def to_cuda(self):
         self.vertices = torch.from_numpy(self.vertices).float().cuda()

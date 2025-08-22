@@ -74,6 +74,12 @@ def optimize_phase1_contact(
     for i in range(nr_phase_1_steps):
         optimizer.zero_grad()
         loss = model()
+
+        if torch.isnan(loss):
+            loop.set_description(f'loss: {0.0:.3g}')
+            loop.update()
+            continue
+            
         loss.backward()
         # print(model.rotation.grad, model.translation.grad)
         optimizer.step()

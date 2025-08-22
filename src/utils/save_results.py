@@ -25,11 +25,14 @@ def save_phase_results(
     mesh_o = trimesh.Trimesh(vertices=object_params.vertices.detach().cpu().numpy(), faces=object_params.faces.detach().cpu().numpy())
     mesh_o.visual.face_colors = COLOR_OBJECT_RED
     mesh = mesh_h + mesh_o
-    mesh.export(os.path.join(output_folder, f'{img_filename[:-4]}_phase{phase}.obj'))
+    mesh_h.export(os.path.join(output_folder, f'human_mesh.obj'))  
+    mesh_o.export(os.path.join(output_folder, f'object_mesh.obj'))  
+    # mesh.export(os.path.join(output_folder, f'human_object_mesh.obj'))
 
     # save rendered views
     if phase == 3:
         visualize_human_object_results(img, img_filename, mesh, human_params, output_folder)
+        mesh.export(os.path.join(output_folder, f'human_object_mesh.obj'))
 
     return
 

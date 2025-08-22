@@ -4,7 +4,7 @@ IMAGE_SIZE = 640
 SMPLX_FACES_PATH = 'static/smplx_faces.npy'
 SMPL_TO_SMPLX_MATRIX_PATH = 'static/smpl_to_smplx.pkl'
 # SMPL_TO_SMPLX_MATRIX_PATH = '/ps/scratch/ps_shared/stripathi/deco++/alpar/essentials/models_utils/smpl_to_smplx.pkl'
-HUMAN_MODEL_PATH = 'static/human_model_files'
+HUMAN_MODEL_PATH = 'data/human_model_files'
 
 # mesh colors
 COLOR_HUMAN_BLUE = [67, 135, 240, 255]

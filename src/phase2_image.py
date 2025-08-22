@@ -44,10 +44,11 @@ class Phase_2_Optimizer(nn.Module):
         self.contact_transfer_map = contact_mapping
         self.img = img
 
-        self.renderer = MySoftSilhouetteRenderer(img.shape, object_params.faces, human_params.bbox)
+        self.renderer = MySoftSilhouetteRenderer(img.shape, object_params.faces, human_params.intrinsic)
 
         dist_mat = ndimage.distance_transform_edt(1 - self.obj_mask.cpu().numpy())
         self.register_buffer('dist_mat', torch.tensor(dist_mat, device='cuda'))
+        self.step = 0
 
         # SDF collision loss setup
         # self.sdf_loss = SDFLoss(human_params.faces, robustifier=1.0) TODO: collision loss temporarily disabled
@@ -56,6 +57,9 @@ class Phase_2_Optimizer(nn.Module):
     def calculate_contact_loss(self, upd_obj_vertices):
         new_object_points = calculate_object_points(upd_obj_vertices, self.contact_transfer_map, self.obj_faces)
         loss = torch.nn.functional.mse_loss(self.human_points, new_object_points)
+        
+        if torch.isnan(loss):
+            loss = torch.tensor(0.0).cuda()
         return {"loss_contact": loss}
     
     def calculate_scale_loss(self):
@@ -98,6 +102,8 @@ class Phase_2_Optimizer(nn.Module):
             distance = self.distance_penalty(current_mask)
             loss += distance_penalty * distance
 
+        if self.step % 10 == 0:
+            cv2.imwrite('debug.png', current_mask.detach().cpu().numpy()*255)
         return {"loss_silhouette": loss}
 
     def forward(self, loss_weights: dict):
@@ -161,11 +167,12 @@ def optimize_phase2_image(
         optimizer.step()
         loop.set_description(f'loss: {loss.item():.3g}')
         loop.update()
+        model.step += 1
 
         if i % 10 == 0:
             loss_str = " | ".join([f"{k}: {loss_dict_weighted[k].item():.3g}" for k in loss_dict_weighted])
             print(loss_str)
-            print("gradients: ", model.rotation.grad, model.translation.grad, model.scaling.grad)
+            # print("gradients: ", model.rotation.grad, model.translation.grad, model.scaling.grad)
 
 
     object_parameters = {}

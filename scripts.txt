@@ -1,0 +1,1 @@
+python demo.py data/demo/hake_train2015_HICO_train2015_00000047.jpg outputs

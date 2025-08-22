@@ -78,7 +78,7 @@ def render_overlaid_view(img, mesh, human_bbox, objmesh=None):
 ##############################################
 ##############################################
 class MyDifferentiableRenderer:
-    def __init__(self, img_shape, faces, human_bbox):
+    def __init__(self, img_shape, faces, intrinsic):
         super().__init__()
         self.img_shape = img_shape
         self.faces = faces
@@ -92,7 +92,10 @@ class MyDifferentiableRenderer:
         T = torch.bmm(R, T.unsqueeze(-1)).squeeze(-1)
 
         # Camera parameters
-        focal, princpt = get_camera_params_torch(human_bbox) # Adjusted to return tensors
+        # focal, princpt = get_camera_params_torch(human_bbox) # Adjusted to return tensors
+        focal = torch.tensor(intrinsic['focal'])
+        princpt = torch.tensor(intrinsic['princpt'])
+
 
         self.camera = PerspectiveCameras(
             focal_length=focal.unsqueeze(0),
@@ -106,8 +109,8 @@ class MyDifferentiableRenderer:
 
 
 class MySoftSilhouetteRenderer(MyDifferentiableRenderer):
-    def __init__(self, img_shape, faces, human_bbox):
-        super().__init__(img_shape, faces, human_bbox)
+    def __init__(self, img_shape, faces, intrinsic):
+        super().__init__(img_shape, faces, intrinsic)
 
         blend_params = BlendParams(
             sigma=1e-4,

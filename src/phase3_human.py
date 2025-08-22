@@ -28,12 +28,12 @@ class Phase_3_Optimizer(nn.Module):
     ):
         super(Phase_3_Optimizer, self).__init__()
 
-        self.register_buffer('smplx_betas', torch.tensor(smplx_params['betas']).float().cuda())
-        self.register_buffer('smplx_global_orient', torch.tensor(smplx_params['global_orient']).float().cuda())
-        self.register_buffer('smplx_jaw_pose', torch.tensor(smplx_params['jaw_pose']).float().cuda())
-        self.register_buffer('smplx_leye_pose', torch.tensor(smplx_params['leye_pose']).float().cuda())
-        self.register_buffer('smplx_reye_pose', torch.tensor(smplx_params['reye_pose']).float().cuda())
-        self.register_buffer('smplx_expression', torch.tensor(smplx_params['expression']).float().cuda())
+        self.register_buffer('smplx_betas', torch.tensor(smplx_params['betas']).clone().float().cuda())
+        self.register_buffer('smplx_global_orient', torch.tensor(smplx_params['global_orient']).clone().float().cuda())
+        self.register_buffer('smplx_jaw_pose', torch.tensor(smplx_params['jaw_pose']).clone().float().cuda())
+        self.register_buffer('smplx_leye_pose', torch.tensor(smplx_params['leye_pose']).clone().float().cuda())
+        self.register_buffer('smplx_reye_pose', torch.tensor(smplx_params['reye_pose']).clone().float().cuda())
+        self.register_buffer('smplx_expression', torch.tensor(smplx_params['expression']).clone().float().cuda())
 
         self.body_pose_indices_to_opt = body_pose_indices_to_opt
         self.left_hand_opt = left_hand_opt
@@ -42,40 +42,42 @@ class Phase_3_Optimizer(nn.Module):
         self.smplx_body_pose_opt = nn.Parameter(
             torch.tensor(smplx_params['body_pose'][:, self.body_pose_indices_to_opt]).float().cuda(), 
             requires_grad=True)
-        self.register_buffer('smplx_body_pose_init', torch.tensor(smplx_params['body_pose']).float().cuda())
+        self.register_buffer('smplx_body_pose_init', torch.tensor(smplx_params['body_pose']).clone().float().cuda())
 
         if left_hand_opt:
-            self.smplx_left_hand_pose = nn.Parameter(torch.tensor(smplx_params['left_hand_pose']).float().cuda(), requires_grad=True)
+            self.smplx_left_hand_pose = nn.Parameter(torch.tensor(smplx_params['left_hand_pose']).clone().float().cuda(), requires_grad=True)
         else:
-            self.register_buffer('smplx_left_hand_pose', torch.tensor(smplx_params['left_hand_pose']).float().cuda())
-        self.register_buffer('smplx_left_hand_pose_init', torch.tensor(smplx_params['left_hand_pose']).float().cuda())
+            self.register_buffer('smplx_left_hand_pose', torch.tensor(smplx_params['left_hand_pose']).clone().float().cuda())
+        self.register_buffer('smplx_left_hand_pose_init', torch.tensor(smplx_params['left_hand_pose']).clone().float().cuda())
         if right_hand_opt:
-            self.smplx_right_hand_pose = nn.Parameter(torch.tensor(smplx_params['right_hand_pose']).float().cuda(), requires_grad=True)
+            self.smplx_right_hand_pose = nn.Parameter(torch.tensor(smplx_params['right_hand_pose']).clone().float().cuda(), requires_grad=True)
         else:
-            self.register_buffer('smplx_right_hand_pose', torch.tensor(smplx_params['right_hand_pose']).float().cuda())
-        self.register_buffer('smplx_right_hand_pose_init', torch.tensor(smplx_params['right_hand_pose']).float().cuda())
+            self.register_buffer('smplx_right_hand_pose', torch.tensor(smplx_params['right_hand_pose']).clone().float().cuda())
+        self.register_buffer('smplx_right_hand_pose_init', torch.tensor(smplx_params['right_hand_pose']).clone().float().cuda())
 
-        self.register_buffer('human_points', human_points)
-        self.register_buffer('object_points', object_points)
+        self.register_buffer('human_points', human_points.clone())
+        self.register_buffer('object_points', object_points.clone())
         self.contact_transfer_map = contact_mapping
 
         smplx_model = smplx.create(HUMAN_MODEL_PATH, 'smplx', gender='NEUTRAL', use_pca=False, use_face_contour=True, **SMPLX_LAYER_ARGS)
         self.smplx_model = smplx_model.cuda()
 
-        self.register_buffer('hum_vertices', human_params.vertices)
-        self.register_buffer('hum_faces', human_params.faces)
-        self.register_buffer('hum_centroid_offset', human_params.centroid_offset)
-        self.register_buffer('hum_bbox', human_params.bbox)
-        self.register_buffer('hum_mask', human_params.mask.float())
-        self.register_buffer('obj_vertices', object_params.vertices)
+        self.register_buffer('hum_vertices', human_params.vertices.clone())
+        self.register_buffer('hum_faces', human_params.faces.clone())
+        self.register_buffer('hum_centroid_offset', human_params.centroid_offset.clone())
+        self.register_buffer('hum_bbox', human_params.bbox.clone())
+        self.register_buffer('hum_mask', human_params.mask.float().clone())
+        self.register_buffer('obj_vertices', object_params.vertices.clone())
         self.img = img
 
         # smplx -> OSX vertex offset
         newverts = self.get_human_verts(remove_offset=False)
         temp_mesh = trimesh.Trimesh(vertices=newverts.detach().cpu().numpy(), faces=human_params.faces.detach().cpu().numpy())
         self.smplx_offset = torch.tensor(temp_mesh.centroid).float().cuda()
+        self.hum_centroid_offset =  torch.tensor([-0.4010734260082245, 0.3584100604057312, 41.90555191040039]).cuda()
 
-        self.renderer = MySoftSilhouetteRenderer(img.shape, human_params.faces, human_params.bbox)
+        self.renderer = MySoftSilhouetteRenderer(img.shape, human_params.faces, human_params.intrinsic)
+        self.step = 0
 
         # SDF collision loss setup
         # self.sdf_loss = SDFLoss(human_params.faces, robustifier=1.0) # TODO: collision loss temporarily disabled
@@ -87,7 +89,7 @@ class Phase_3_Optimizer(nn.Module):
         full_pose[:, self.body_pose_indices_to_opt] = self.smplx_body_pose_opt
         return full_pose
 
-    def get_human_verts(self, remove_offset=True):
+    def get_human_verts(self, remove_offset=False):
         output = self.smplx_model(
             betas=self.smplx_betas,
             body_pose=self.get_smplx_body_pose(),
@@ -108,6 +110,8 @@ class Phase_3_Optimizer(nn.Module):
     def calculate_contact_loss(self, upd_human_vertices):
         new_human_points = calculate_human_points(upd_human_vertices, self.contact_transfer_map)
         loss = torch.nn.functional.mse_loss(new_human_points, self.object_points)
+        if torch.isnan(loss):
+            loss = torch.tensor(0.0).cuda()
         return {"loss_contact": loss}
 
     # TODO: collision loss temporarily disabled    
@@ -131,6 +135,9 @@ class Phase_3_Optimizer(nn.Module):
         intersection = torch.sum(current_mask * self.hum_mask)
         union = torch.sum((current_mask + self.hum_mask).clamp(0, 1))
         loss = 1 - intersection / union
+
+        if self.step % 10 == 0:
+            cv2.imwrite('debug.png', current_mask.detach().cpu().numpy()*255)
         return {"loss_silhouette_human": loss}
 
     def calculate_silhouette_loss_l2(self, upd_human_vertices):
@@ -214,15 +221,16 @@ def optimize_phase3_human(
         optimizer.step()
         loop.set_description(f'loss: {loss.item():.3g}')
         loop.update()
+        model.step += 1
 
         if i % 10 == 0:
             loss_str = " | ".join([f"{k}: {loss_dict_weighted[k].item():.3g}" for k in loss_dict_weighted])
             print(loss_str)
-            print('body', torch.mean(model.smplx_body_pose_opt.grad), torch.mean(model.smplx_body_pose_opt))
-            if left_hand_opt:
-                print('lhand', torch.mean(model.smplx_left_hand_pose.grad), torch.mean(model.smplx_left_hand_pose))
-            if right_hand_opt:
-                print('rhand', torch.mean(model.smplx_right_hand_pose.grad), torch.mean(model.smplx_right_hand_pose))
+            # print('body', torch.mean(model.smplx_body_pose_opt.grad), torch.mean(model.smplx_body_pose_opt))
+            # if left_hand_opt:
+            #     print('lhand', torch.mean(model.smplx_left_hand_pose.grad), torch.mean(model.smplx_left_hand_pose))
+            # if right_hand_opt:
+            #     print('rhand', torch.mean(model.smplx_right_hand_pose.grad), torch.mean(model.smplx_right_hand_pose))
 
 
     human_parameters = {}
