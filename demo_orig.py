@@ -24,9 +24,6 @@ def main(
     img_filename = input_folder.split("/")[-1]  
     input_folder = input_folder.replace(f"/{img_filename}", "")
     
-    cfg.nr_phase_2_steps = 500
-    cfg.nr_phase_3_steps = 500
-
     from glob import glob
     from tqdm import tqdm
     dir_list = sorted(glob(f"data/open3dhoi_p1/*"))
@@ -39,8 +36,6 @@ def main(
         human_detection_file = f"{dir_path}/person_mask.png"
         object_mesh_file = f"{dir_path}/obj_pcd_h_align.obj"
         object_detection_file = f"{dir_path}/obj_mask.png"
-        contact_mapping_file1 = f"data/lemon3d_open3dhoi_p1/{sample}/human_contact.npy"
-        contact_mapping_file2 = f"data/lemon3d_open3dhoi_p1/{sample}/object_contact.npy"
         output_folder = f"exp/{exp_name}/{sample}"
         os.makedirs(output_folder, exist_ok=True)
 
@@ -59,8 +54,10 @@ def main(
                 img.shape[:2]
             )
             contact_mapping = load_contact_mapping(
-                contact_mapping_file1, contact_mapping_file2
+                os.path.join(input_folder, cfg.contact_mapping_file)
             )
+
+            import pdb; pdb.set_trace()
 
             
             if not cfg.skip_phase_1:
@@ -86,7 +83,6 @@ def main(
 
             if not cfg.skip_phase_3:
                 p3_human_params = optimize_phase3_human(human_params, object_params, contact_mapping, img, loss_weights, cfg.nr_phase_3_steps)
-                
                 human_params.vertices = p3_human_params['vertices']
                 save_phase_results(
                     img_filename, output_folder, img,

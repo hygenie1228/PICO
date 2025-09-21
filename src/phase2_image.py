@@ -129,7 +129,7 @@ def optimize_phase2_image(
     object_mesh = trimesh.Trimesh(vertices=object_params.vertices.detach().cpu().numpy(), faces=object_params.faces.detach().cpu().numpy())
     human_mesh = trimesh.Trimesh(vertices=human_params.vertices.detach().cpu().numpy(), faces=human_params.faces.detach().cpu().numpy())
 
-    human_points, object_points = interpret_contact_points(contact_mapping, human_mesh.vertices, object_mesh)
+    human_points, object_points, contact_mapping2 = interpret_contact_points(contact_mapping, human_mesh.vertices, object_mesh)
     
     rotation_init = torch.tensor([1.01, 0.01, 0.01, 1.01, 0.01, 0.01], requires_grad=True).cuda()
     translation_init = torch.tensor([0.0, 0.0, 0.0], requires_grad=True).cuda()
@@ -143,7 +143,7 @@ def optimize_phase2_image(
         object_points,
         human_params,
         object_params,
-        contact_mapping,
+        contact_mapping2,
         img,
     )
     model.cuda()

@@ -31,7 +31,7 @@ def save_phase_results(
 
     # save rendered views
     if phase == 3:
-        visualize_human_object_results(img, img_filename, mesh, human_params, output_folder)
+        # visualize_human_object_results(img, img_filename, mesh, human_params, output_folder)
         mesh.export(os.path.join(output_folder, f'human_object_mesh.obj'))
 
     return

@@ -109,6 +109,7 @@ class Phase_3_Optimizer(nn.Module):
 
     def calculate_contact_loss(self, upd_human_vertices):
         new_human_points = calculate_human_points(upd_human_vertices, self.contact_transfer_map)
+
         loss = torch.nn.functional.mse_loss(new_human_points, self.object_points)
         if torch.isnan(loss):
             loss = torch.tensor(0.0).cuda()
@@ -170,7 +171,7 @@ def optimize_phase3_human(
     object_mesh = trimesh.Trimesh(vertices=object_params.vertices.detach().cpu().numpy(), faces=object_params.faces.detach().cpu().numpy())
     human_mesh = trimesh.Trimesh(vertices=human_params.vertices.detach().cpu().numpy(), faces=human_params.faces.detach().cpu().numpy())
 
-    human_points, object_points = interpret_contact_points(contact_mapping, human_mesh.vertices, object_mesh)
+    human_points, object_points, contact_mapping2 = interpret_contact_points(contact_mapping, human_mesh.vertices, object_mesh)
 
     # select which pose parameters (and hands) to optimize - the ones in contact
     body_pose_indices_to_opt, left_hand_opt, right_hand_opt = select_pose_parameters(contact_mapping)
@@ -187,7 +188,7 @@ def optimize_phase3_human(
         human_params.smplx_params,
         human_points,
         object_points,
-        contact_mapping,
+        contact_mapping2,
         body_pose_indices_to_opt,
         left_hand_opt,
         right_hand_opt,
@@ -237,4 +238,5 @@ def optimize_phase3_human(
     updated_human_vertices = model.get_human_verts()
     human_parameters["vertices"] = updated_human_vertices.detach()
 
+    
     return human_parameters
