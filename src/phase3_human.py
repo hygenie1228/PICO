@@ -179,7 +179,7 @@ def optimize_phase3_human(
         print("--> No contacting limbs to optimize! Skipping phase 3.")
         human_parameters = {}
         human_parameters["vertices"] = human_params.vertices.detach()
-        return human_parameters, {}
+        return human_parameters
     print("Optimizing body pose indices:", body_pose_indices_to_opt)
     print("Optimizing left hand:", left_hand_opt)
     print("Optimizing right hand:", right_hand_opt)

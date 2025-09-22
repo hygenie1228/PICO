@@ -30,7 +30,7 @@ def main(
     from glob import glob
     from tqdm import tqdm
     dir_list = sorted(glob(f"data/open3dhoi_p1/*"))
-    for dir_path in tqdm(dir_list[:]):
+    for dir_path in tqdm(dir_list[::-1]):
         exp_name = dir_path.split("/")[-2]
         sample = dir_path.split("/")[-1]
 
@@ -43,9 +43,9 @@ def main(
         contact_mapping_file2 = f"data/lemon3d_open3dhoi_p1/{sample}/object_contact.npy"
         output_folder = f"exp/{exp_name}/{sample}"
         os.makedirs(output_folder, exist_ok=True)
-
-        # if os.path.isfile(f"{output_folder}/human_object_mesh.obj"):
-        #     continue
+        
+        if os.path.isfile(f"{output_folder}/human_object_mesh.obj"):
+            continue
 
         if True:
             human_params = load_human_params(
@@ -87,12 +87,15 @@ def main(
             if not cfg.skip_phase_3:
                 p3_human_params = optimize_phase3_human(human_params, object_params, contact_mapping, img, loss_weights, cfg.nr_phase_3_steps)
                 
-                human_params.vertices = p3_human_params['vertices']
-                save_phase_results(
-                    img_filename, output_folder, img,
-                    human_params, object_params,
-                    phase = 3,
-                )
+                try:
+                    human_params.vertices = p3_human_params['vertices']
+                    save_phase_results(
+                        img_filename, output_folder, img,
+                        human_params, object_params,
+                        phase = 3,
+                    )
+                except:
+                    pass
         else:
             import pdb; pdb.set_trace()
 
